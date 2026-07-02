@@ -1,0 +1,61 @@
+# Project Test Tree
+
+## tests/
+
+tests/
+├── __init__.py [x] (not required; tests run without package init)
+├── conftest.py [x] (not required; each test file defines its own fixtures)
+│   ├── function mock_asana_client() [x] (not required)
+│   ├── function mock_task_service() [x] (not required)
+│   ├── function test_settings() [x] (not required)
+│   └── function client() [x] (not required)
+├── test_asana_client.py [x]
+│   ├── class TestAsanaClient [x]
+│   │   ├── function test_init() [x]
+│   │   ├── function test_get_tasks_api() [x]
+│   │   └── function test_get_stories_api() [x]
+├── test_config.py [x]
+│   ├── class TestSettings [x]
+│   │   ├── function test_load_settings() [x]
+│   │   ├── function test_load_settings_without_project_id() [x]
+│   │   └── function test_missing_access_token() [x]
+├── test_main.py [x]
+│   └── function test_main() [x]
+├── test_models.py [x]
+│   ├── class TestTaskResponse [x]
+│   │   ├── function test_task_response_valid() [x]
+│   │   └── function test_task_response_serialization() [x]
+│   ├── class TestCommentRequest [x]
+│   │   ├── function test_comment_request_valid() [x]
+│   │   └── function test_comment_request_missing_text() [x]
+│   ├── class TestCommentResponse [x]
+│   │   ├── function test_comment_response_valid() [x]
+│   │   └── function test_comment_response_serialization() [x]
+│   ├── class TestTaskUpdateResponse [x]
+│   │   ├── function test_task_update_response_valid() [x]
+│   │   └── function test_task_update_response_serialization() [x]
+│   └── class TestErrorResponse [x]
+│       ├── function test_error_response_valid() [x]
+│       └── function test_error_response_serialization() [x]
+├── test_routes.py [x]
+│   ├── class TestGetTasks [x]
+│   │   ├── function test_get_tasks_success() [x]
+│   │   └── function test_get_tasks_service_error() [x]
+│   ├── class TestAddComment [x]
+│   │   ├── function test_add_comment_success() [x]
+│   │   ├── function test_add_comment_invalid_input() [x]
+│   │   └── function test_add_comment_task_not_found() [x]
+│   └── class TestCompleteTask [x]
+│       ├── function test_complete_task_success() [x]
+│       └── function test_complete_task_task_not_found() [x]
+└── test_task_service.py [x]
+    ├── class TestTaskService [x]
+    │   ├── function test_init() [x]
+    │   ├── function test_list_tasks_success() [x]
+    │   ├── function test_list_tasks_api_error() [x]
+    │   ├── function test_add_comment_success() [x]
+    │   ├── function test_add_comment_task_not_found() [x]
+    │   ├── function test_add_comment_api_error() [x]
+    │   ├── function test_complete_task_success() [x]
+    │   ├── function test_complete_task_task_not_found() [x]
+    │   └── function test_complete_task_api_error() [x]
