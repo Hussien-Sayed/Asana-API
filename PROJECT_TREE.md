@@ -10,7 +10,7 @@
 ├── Input:
 │   - None (static template file)
 └── Output:
-    - Template with placeholder values for ASANA_ACCESS_TOKEN, ASANA_PROJECT_ID, ASANA_WORKSPACE_ID
+    - Template with placeholder values for ASANA_ACCESS_TOKEN, ASANA_PROJECT_ID, ASANA_WORKSPACE_ID, APP_HOST
 
 .env [x]
 ├── Functionality:
@@ -20,7 +20,38 @@
 ├── Input:
 │   - None (manually created by user)
 └── Output:
-    - Environment variables: ASANA_ACCESS_TOKEN, ASANA_PROJECT_ID, ASANA_WORKSPACE_ID
+    - Environment variables: ASANA_ACCESS_TOKEN, ASANA_PROJECT_ID, ASANA_WORKSPACE_ID, APP_HOST
+
+Dockerfile [x]
+├── Functionality:
+│   - Build the FastAPI application container image
+│   - Install Python dependencies from requirements.txt
+│   - Copy application source into the image
+│   - Set APP_HOST=0.0.0.0 for container networking
+│   - Use Python 3.12 slim base image (pydantic-core wheel compatibility)
+├── Input:
+│   - requirements.txt, source files
+└── Output:
+    - Runnable container image with Uvicorn on port 8000
+
+docker-compose.yml [x]
+├── Functionality:
+│   - Build and run the Asana-API container locally
+│   - Map port 127.0.0.1:8000:8000 to keep it local-only
+│   - Load environment variables from .env at runtime
+├── Input:
+│   - Dockerfile, .env
+└── Output:
+    - Running container accessible only at http://127.0.0.1:8000
+
+.dockerignore [x]
+├── Functionality:
+│   - Exclude files from the Docker build context
+│   - Prevent secrets and build artifacts from being copied into the image
+├── Input:
+│   - None (static file)
+└── Output:
+    - List of ignored patterns: .env, __pycache__, .git, .agent_files, etc.
 
 requirements.txt [x]
 ├── Functionality:
@@ -81,8 +112,9 @@ main.py [x]
 │   │   - Register route handlers
 │   │   - Configure dependency injection
 │   │   - Start the Uvicorn server
+│   │   - Read APP_HOST from environment (default 127.0.0.1 for local-only)
 │   ├── Input:
-│   │   - None (uses configuration from Settings)
+│   │   - APP_HOST environment variable (optional, defaults to 127.0.0.1)
 │   └── Output:
 │       - None (runs the web server)
 

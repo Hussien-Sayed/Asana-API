@@ -45,6 +45,9 @@ ASANA_ACCESS_TOKEN=your_asana_personal_access_token_here
 
 # Optional: workspace ID if needed by your Asana workflow
 # ASANA_WORKSPACE_ID=your_asana_workspace_id_here
+
+# Optional: bind host (defaults to 127.0.0.1 for local-only when running directly)
+# APP_HOST=127.0.0.1
 ```
 
 Only `ASANA_ACCESS_TOKEN` is required to start the server. The project ID is supplied per request in the URL path.
@@ -60,13 +63,31 @@ Uvicorn will start the application on `http://localhost:8000`.
 You can also start it explicitly with Uvicorn:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-### 5. Verify the server is healthy
+---
+
+## Running with Docker
+
+### 1. Build and run with Docker Compose
 
 ```bash
-curl http://localhost:8000/
+docker compose up
+```
+
+This will:
+- Build the Docker image from the local `Dockerfile`
+- Start the container with the name `asana-api`
+- Map port `127.0.0.1:8000` on the host to port `8000` in the container
+- Load environment variables from `.env` at runtime
+
+The service will be accessible at `http://127.0.0.1:8000`.
+
+### 2. Verify the server is healthy
+
+```bash
+curl http://127.0.0.1:8000/
 ```
 
 Expected response:
@@ -74,6 +95,18 @@ Expected response:
 ```json
 {"status":"ok"}
 ```
+
+### 3. Stop the container
+
+```bash
+docker compose down
+```
+
+### Important notes
+
+- When running with `python main.py` directly, the app binds to `127.0.0.1` by default (local-only).
+- When running with Docker, the container internally uses `APP_HOST=0.0.0.0` to accept traffic from Docker's port forwarding.
+- The Docker Compose port mapping `127.0.0.1:8000:8000` ensures the service is only accessible from the host machine, not from the local network or internet.
 
 ---
 
@@ -187,6 +220,7 @@ All error responses are JSON:
 | `ASANA_ACCESS_TOKEN` | Yes | Asana personal access token used to authenticate API calls. |
 | `ASANA_PROJECT_ID` | No | Optional default project ID. The project ID is normally provided in the request URL. |
 | `ASANA_WORKSPACE_ID` | No | Optional Asana workspace ID. |
+| `APP_HOST` | No | Host address for the FastAPI/Uvicorn server. Defaults to `127.0.0.1` for direct runs. Docker sets this to `0.0.0.0` internally. |
 
 ---
 

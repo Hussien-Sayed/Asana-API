@@ -1,0 +1,14 @@
+.env
+.git/
+.gitignore
+.agent_files/
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
+venv/
+README.md
+PROJECT_TREE.md
+PROJECT_TEST_TREE.md
+task_id.txt
+*.log
