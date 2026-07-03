@@ -124,6 +124,7 @@ models.py [x]
 │   │   - Pydantic model for task data response
 │   │   - Validate task structure from Asana API
 │   │   - Serialize task data to JSON
+│   │   - Include custom fields list
 │   ├── Input:
 │   │   - gid: str — Task unique identifier
 │   │   - name: str — Task name/title
@@ -133,8 +134,33 @@ models.py [x]
 │   │   - due_on: Optional[str] — Due date in YYYY-MM-DD format
 │   │   - notes: Optional[str] — Task description/notes
 │   │   - permalink_url: Optional[str] — URL to task in Asana web UI
+│   │   - custom_fields: List[CustomField] — Custom fields list (defaults to [])
 │   └── Output:
 │       - Validated TaskResponse instance
+├── class CustomField [x]
+│   ├── Functionality:
+│   │   - Pydantic model for custom field data
+│   │   - Represent Asana custom field values
+│   │   - Validate custom field structure
+│   ├── Input:
+│   │   - gid: str — Custom field unique identifier
+│   │   - name: str — Custom field name (e.g., "Priority", "Project")
+│   │   - display_value: Optional[str] — Display value of the custom field
+│   │   - type: Optional[str] — Custom field type (e.g., "enum", "text")
+│   └── Output:
+│       - Validated CustomField instance
+├── class TaskCommentResponse [x]
+│   ├── Functionality:
+│   │   - Pydantic model for task comment response
+│   │   - Represent individual comment items from stories
+│   │   - Validate comment structure from Asana API
+│   ├── Input:
+│   │   - gid: str — Comment unique identifier
+│   │   - text: str — Comment message text
+│   │   - created_at: str — Timestamp when comment was created
+│   │   - created_by: Optional[dict] — Creator information (name, gid)
+│   └── Output:
+│       - Validated TaskCommentResponse instance
 ├── class CommentRequest [x]
 │   ├── Functionality:
 │   │   - Pydantic model for comment creation request
@@ -217,19 +243,34 @@ routes/
     │       - CommentResponse — JSON with created comment details
     │       - HTTPException with status 404 if task not found
     │       - HTTPException with status 500 on service failure
-    └── function complete_task() [x]
+    ├── function complete_task() [x]
+    │   ├── Functionality:
+    │   │   - POST endpoint to mark task as complete
+    │   │   - Accept project_id and task_id from the URL path
+    │   │   - Call task service to update task status
+    │   │   - Return updated task status
+    │   │   - Handle 404 for missing tasks, 500 for API failures
+    │   ├── Input:
+    │   │   - project_id: str — Path parameter for project ID
+    │   │   - task_id: str — Path parameter for task ID
+    │   │   - task_service: TaskService — Injected service instance via Depends
+    │   └── Output:
+    │       - TaskUpdateResponse — JSON with updated task status
+    │       - HTTPException with status 404 if task not found
+    │       - HTTPException with status 500 on service failure
+    └── function get_task_comments() [x]
         ├── Functionality:
-        │   - POST endpoint to mark task as complete
+        │   - GET endpoint to retrieve comments for a specific task
         │   - Accept project_id and task_id from the URL path
-        │   - Call task service to update task status
-        │   - Return updated task status
+        │   - Call task service to fetch comments
+        │   - Return list of comment objects
         │   - Handle 404 for missing tasks, 500 for API failures
         ├── Input:
         │   - project_id: str — Path parameter for project ID
         │   - task_id: str — Path parameter for task ID
         │   - task_service: TaskService — Injected service instance via Depends
         └── Output:
-            - TaskUpdateResponse — JSON with updated task status
+            - List[TaskCommentResponse] — JSON array of comment objects
             - HTTPException with status 404 if task not found
             - HTTPException with status 500 on service failure
 
@@ -249,12 +290,14 @@ services/
         │   │   - Retrieve all tasks from a given Asana project
         │   │   - Use TasksApi to fetch tasks by project ID
         │   │   - Transform Asana task objects to TaskResponse models
+        │   │   - Add custom_fields to opt_fields string
+        │   │   - Map custom fields from response to CustomField models
         │   │   - Handle API errors and raise appropriate exceptions
         │   ├── Input:
         │   │   - project_id: str — ID of the Asana project to query
         │   └── Output:
-        │       - List[TaskResponse] — List of task objects
-        │       - Raises Exception on Asana API failure
+        │       - List[TaskResponse] — List of task objects with custom fields
+        │       - Raises HTTPException 500 on Asana API failure
         ├── method add_comment() [x]
         │   ├── Functionality:
         │   │   - Add a comment to a specific task
@@ -267,18 +310,33 @@ services/
         │   │   - text: str — Comment message text
         │   └── Output:
         │       - CommentResponse — Created comment details
-        │       - Raises ValueError if task not found
-        │       - Raises Exception on Asana API failure
-        └── method complete_task() [x]
+        │       - Raises HTTPException 404 if task not found
+        │       - Raises HTTPException 500 on Asana API failure
+        ├── method complete_task() [x]
+        │   ├── Functionality:
+        │   │   - Mark a specific task as complete
+        │   │   - Use TasksApi to update task completed status
+        │   │   - Transform response to TaskUpdateResponse model
+        │   │   - Handle 404 errors for missing tasks
+        │   ├── Input:
+        │   │   - project_id: str — ID of the Asana project (for route consistency)
+        │   │   - task_id: str — ID of the task to complete
+        │   └── Output:
+        │       - TaskUpdateResponse — Updated task status
+        │       - Raises HTTPException 404 if task not found
+        │       - Raises HTTPException 500 on Asana API failure
+        └── method get_task_comments() [x]
             ├── Functionality:
-            │   - Mark a specific task as complete
-            │   - Use TasksApi to update task completed status
-            │   - Transform response to TaskUpdateResponse model
+            │   - Retrieve comments for a specific task
+            │   - Use StoriesApi.get_stories_for_task() to fetch stories
+            │   - Filter stories by resource_subtype == "comment_added"
+            │   - Transform filtered stories to TaskCommentResponse models
             │   - Handle 404 errors for missing tasks
+            │   - Handle API errors with 500 response
             ├── Input:
             │   - project_id: str — ID of the Asana project (for route consistency)
-            │   - task_id: str — ID of the task to complete
+            │   - task_id: str — ID of the task to fetch comments for
             └── Output:
-                - TaskUpdateResponse — Updated task status
-                - Raises ValueError if task not found
-                - Raises Exception on Asana API failure
+                - List[TaskCommentResponse] — List of comment objects
+                - Raises HTTPException 404 if task not found
+                - Raises HTTPException 500 on Asana API failure

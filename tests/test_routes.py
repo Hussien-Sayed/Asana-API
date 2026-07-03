@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 
 from routes.tasks import router, get_task_service
-from models import TaskResponse, CommentResponse, TaskUpdateResponse
+from models import TaskResponse, CommentResponse, TaskUpdateResponse, TaskCommentResponse
 
 
 @pytest.fixture
@@ -48,7 +48,8 @@ class TestGetTasks:
                 "assignee": None,
                 "due_on": None,
                 "notes": None,
-                "permalink_url": None
+                "permalink_url": None,
+                "custom_fields": []
             }
         ]
         mock_task_service.list_tasks.assert_called_once_with("proj123")
@@ -141,4 +142,52 @@ class TestCompleteTask:
 
         assert response.status_code == 404
         assert response.json() == {"detail": "Task not found"}
+
+
+class TestGetTaskComments:
+    def test_get_task_comments_success(self, client, mock_task_service):
+        """Test GET /projects/{project_id}/tasks/{task_id}/comments returns list of comments."""
+        mock_task_service.get_task_comments.return_value = [
+            TaskCommentResponse(
+                gid="s1",
+                text="Hello",
+                created_at="2024-01-01T00:00:00Z",
+                created_by={"gid": "u1", "name": "Alice"}
+            )
+        ]
+
+        response = client.get("/projects/proj123/tasks/123/comments")
+
+        assert response.status_code == 200
+        assert response.json() == [
+            {
+                "gid": "s1",
+                "text": "Hello",
+                "created_at": "2024-01-01T00:00:00Z",
+                "created_by": {"gid": "u1", "name": "Alice"}
+            }
+        ]
+        mock_task_service.get_task_comments.assert_called_once_with("proj123", "123")
+
+    def test_get_task_comments_task_not_found(self, client, mock_task_service):
+        """Test GET /projects/{project_id}/tasks/{task_id}/comments returns 404 when task not found."""
+        mock_task_service.get_task_comments.side_effect = HTTPException(
+            status_code=404, detail="Task not found"
+        )
+
+        response = client.get("/projects/proj123/tasks/123/comments")
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Task not found"}
+
+    def test_get_task_comments_service_error(self, client, mock_task_service):
+        """Test GET /projects/{project_id}/tasks/{task_id}/comments returns 500 on service error."""
+        mock_task_service.get_task_comments.side_effect = HTTPException(
+            status_code=500, detail="Asana API error: Internal Server Error"
+        )
+
+        response = client.get("/projects/proj123/tasks/123/comments")
+
+        assert response.status_code == 500
+        assert "Asana API error" in response.json()["detail"]
 

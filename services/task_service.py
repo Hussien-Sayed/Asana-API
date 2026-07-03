@@ -4,7 +4,7 @@ import asana
 from asana.rest import ApiException
 
 from asana_client import AsanaClient
-from models import TaskResponse, CommentResponse, TaskUpdateResponse
+from models import TaskResponse, CommentResponse, TaskUpdateResponse, TaskCommentResponse, AttachFileResponse
 
 
 class TaskService:
@@ -34,7 +34,7 @@ class TaskService:
         """
         tasks_api = self.asana_client.get_tasks_api()
         opts = {
-            "opt_fields": "gid,name,completed,completed_at,assignee,due_on,notes,permalink_url"
+            "opt_fields": "gid,name,completed,completed_at,assignee,due_on,notes,permalink_url,custom_fields"
         }
 
         try:
@@ -65,6 +65,73 @@ class TaskService:
         try:
             result = stories_api.create_story_for_task(body=body, task_gid=task_id, opts={})
             return CommentResponse(**result)
+        except ApiException as e:
+            if e.status == 404:
+                raise HTTPException(status_code=404, detail="Task not found")
+            raise HTTPException(status_code=500, detail=f"Asana API error: {e.reason}")
+
+    def get_task_comments(self, project_id: str, task_id: str) -> List[TaskCommentResponse]:
+        """
+        Get all comments on a task.
+
+        Args:
+            project_id: ID of the Asana project (for route consistency, not used in API call)
+            task_id: ID of the task to get comments for
+
+        Returns:
+            List[TaskCommentResponse]: List of comments on the task
+
+        Raises:
+            HTTPException: 404 if task not found, 500 on other errors
+        """
+        stories_api = self.asana_client.get_stories_api()
+        opts = {
+            "opt_fields": "gid,text,created_at,created_by,resource_subtype"
+        }
+
+        try:
+            result = stories_api.get_stories_for_task(task_gid=task_id, opts=opts)
+            comments = [
+                TaskCommentResponse(**story)
+                for story in result
+                if story.get("resource_subtype") == "comment_added"
+            ]
+            return comments
+        except ApiException as e:
+            if e.status == 404:
+                raise HTTPException(status_code=404, detail="Task not found")
+            raise HTTPException(status_code=500, detail=f"Asana API error: {e.reason}")
+
+    def attach_file_to_task(self, project_id: str, task_id: str, filename: str) -> AttachFileResponse:
+        """
+        Attach a file from the uploads folder to a task.
+
+        Args:
+            project_id: ID of the Asana project (for route consistency, not used in API call)
+            task_id: ID of the task to attach the file to
+            filename: Name of the file inside the uploads folder (e.g. "report.pdf")
+
+        Returns:
+            AttachFileResponse: Created attachment details
+
+        Raises:
+            HTTPException: 404 if task or file not found, 500 on other errors
+        """
+        import os
+        file_path = os.path.join("/uploads", filename)
+        if not os.path.isfile(file_path):
+            raise HTTPException(status_code=404, detail=f"File '{filename}' not found in uploads folder")
+
+        attachments_api = self.asana_client.get_attachments_api()
+        opts = {
+            "resource_subtype": "asana",
+            "file": file_path,
+            "parent": task_id,
+        }
+
+        try:
+            result = attachments_api.create_attachment_for_object(opts)
+            return AttachFileResponse(**result)
         except ApiException as e:
             if e.status == 404:
                 raise HTTPException(status_code=404, detail="Task not found")

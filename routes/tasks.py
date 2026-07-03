@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from models import TaskResponse, CommentRequest, CommentResponse, TaskUpdateResponse
+from models import TaskResponse, CommentRequest, CommentResponse, TaskUpdateResponse, TaskCommentResponse, AttachFileRequest, AttachFileResponse
 from services.task_service import TaskService
 from config import get_settings
 from asana_client import AsanaClient
@@ -53,3 +53,32 @@ async def complete_task(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to complete task: {str(e)}")
+
+
+@router.post("/{project_id}/tasks/{task_id}/attach", response_model=AttachFileResponse)
+async def attach_file(
+    project_id: str,
+    task_id: str,
+    request: AttachFileRequest,
+    task_service: TaskService = Depends(get_task_service)
+) -> AttachFileResponse:
+    try:
+        return task_service.attach_file_to_task(project_id, task_id, request.filename)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to attach file: {str(e)}")
+
+
+@router.get("/{project_id}/tasks/{task_id}/comments", response_model=List[TaskCommentResponse])
+async def get_task_comments(
+    project_id: str,
+    task_id: str,
+    task_service: TaskService = Depends(get_task_service)
+) -> List[TaskCommentResponse]:
+    try:
+        return task_service.get_task_comments(project_id, task_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve comments: {str(e)}")

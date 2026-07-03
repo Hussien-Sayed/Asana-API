@@ -2,7 +2,7 @@ import asana
 
 
 class AsanaClient:
-    """Wrapper for the Asana API client providing access to TasksApi and StoriesApi."""
+    """Wrapper for the Asana API client providing access to TasksApi, StoriesApi, and AttachmentsApi."""
 
     def __init__(self, access_token: str):
         """
@@ -32,3 +32,12 @@ class AsanaClient:
             StoriesApi: Asana SDK StoriesApi instance for comment/story operations
         """
         return asana.StoriesApi(self.api_client)
+
+    def get_attachments_api(self) -> asana.AttachmentsApi:
+        """
+        Return an AttachmentsApi instance from the Asana client.
+
+        Returns:
+            AttachmentsApi: Asana SDK AttachmentsApi instance for file attachment operations
+        """
+        return asana.AttachmentsApi(self.api_client)

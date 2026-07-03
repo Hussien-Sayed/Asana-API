@@ -6,7 +6,30 @@ from models import (
     CommentResponse,
     TaskUpdateResponse,
     ErrorResponse,
+    CustomField,
+    TaskCommentResponse,
 )
+
+
+class TestCustomField:
+    def test_custom_field_valid(self):
+        """Test valid CustomField instantiation with all fields."""
+        custom_field = CustomField(
+            gid="cf1",
+            name="Priority",
+            display_value="High",
+            type="enum"
+        )
+        assert custom_field.gid == "cf1"
+        assert custom_field.name == "Priority"
+        assert custom_field.display_value == "High"
+        assert custom_field.type == "enum"
+
+    def test_custom_field_serialization(self):
+        """Test CustomField serialization with optional fields defaulting to None."""
+        custom_field = CustomField(gid="cf1", name="Priority")
+        assert custom_field.display_value is None
+        assert custom_field.type is None
 
 
 class TestTaskResponse:
@@ -21,6 +44,7 @@ class TestTaskResponse:
             due_on="2024-01-15",
             notes="Some notes",
             permalink_url="https://app.asana.com/0/12345/67890",
+            custom_fields=[{"gid": "cf1", "name": "Priority", "display_value": "High", "type": "enum"}]
         )
         assert task.gid == "12345"
         assert task.name == "Test Task"
@@ -30,6 +54,7 @@ class TestTaskResponse:
         assert task.due_on == "2024-01-15"
         assert task.notes == "Some notes"
         assert task.permalink_url == "https://app.asana.com/0/12345/67890"
+        assert task.custom_fields[0].name == "Priority"
 
     def test_task_response_serialization(self):
         """Test TaskResponse serialization with model_dump() and optional fields defaulting to None."""
@@ -45,7 +70,9 @@ class TestTaskResponse:
             "due_on": None,
             "notes": None,
             "permalink_url": None,
+            "custom_fields": [],
         }
+        assert task.custom_fields == []
 
         # Test with all fields
         task_full = TaskResponse(
@@ -117,6 +144,30 @@ class TestTaskUpdateResponse:
             "name": "Updated Task",
             "completed": True,
         }
+
+
+class TestTaskCommentResponse:
+    def test_task_comment_response_valid(self):
+        """Test valid TaskCommentResponse instantiation with all fields."""
+        comment = TaskCommentResponse(
+            gid="s1",
+            text="Hello",
+            created_at="2024-01-01T00:00:00Z",
+            created_by={"gid": "u1", "name": "Alice"}
+        )
+        assert comment.gid == "s1"
+        assert comment.text == "Hello"
+        assert comment.created_at == "2024-01-01T00:00:00Z"
+        assert comment.created_by == {"gid": "u1", "name": "Alice"}
+
+    def test_task_comment_response_serialization(self):
+        """Test TaskCommentResponse serialization with optional field defaulting to None."""
+        comment = TaskCommentResponse(
+            gid="s1",
+            text="Hello",
+            created_at="2024-01-01T00:00:00Z"
+        )
+        assert comment.created_by is None
 
 
 class TestErrorResponse:

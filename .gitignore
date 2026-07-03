@@ -81,3 +81,7 @@ share/python-wheels/
 # Docker
 docker-compose.override.yml
 
+# Uploads folder — keep the folder, ignore its contents
+uploads/*
+!uploads/.gitkeep
+

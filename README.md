@@ -1,9 +1,11 @@
 # Asana API
 
-A lightweight FastAPI service that exposes three REST endpoints for managing Asana tasks:
+A lightweight FastAPI service that exposes REST endpoints for managing Asana tasks:
 
-- List tasks in a project
+- List tasks in a project (including custom fields such as Priority and Project)
+- Get all comments on a task
 - Add a comment to a task
+- Attach a file to a task
 - Mark a task as complete
 
 The project ID is passed as a route parameter, so a single running instance can serve multiple Asana projects without restarting.
@@ -110,6 +112,36 @@ docker compose down
 
 ---
 
+## File attachments with Docker
+
+When using the `/attach` endpoint inside Docker, the file path you provide must exist **inside the container**. The cleanest way to achieve this is to mount a folder from your host machine into the container using a Docker volume.
+
+### How it works
+
+The `uploads/` folder at the project root is mounted into the container at `/uploads` (read-only). Any file you place in that folder on your host becomes immediately visible to the container.
+
+```
+Host:      D:\Projects\Asana-API\uploads\report.pdf
+Container: /uploads/report.pdf   ← resolved automatically by the API
+```
+
+The volume mount is already configured in `docker-compose.yml` — no extra setup needed.
+
+### Using it
+
+1. Copy the file you want to attach into the `uploads/` folder at the project root.
+2. Call the attach endpoint with just the filename:
+
+```bash
+curl -X POST http://localhost:8000/projects/{project_id}/tasks/{task_id}/attach \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "report.pdf"}'
+```
+
+The `:ro` (read-only) mount means the container can read files from `uploads/` but cannot write back to your host filesystem.
+
+---
+
 ## API endpoints
 
 All task endpoints are scoped under `/projects/{project_id}`.
@@ -137,11 +169,46 @@ Response (excerpt):
     "completed_at": null,
     "assignee": null,
     "due_on": null,
-    "notes": null,
-    "permalink_url": "https://app.asana.com/0/..."
+    "notes": "Task description here",
+    "permalink_url": "https://app.asana.com/0/...",
+    "custom_fields": [
+      {"gid": "cf1", "name": "Priority", "display_value": "High", "type": "enum"},
+      {"gid": "cf2", "name": "Project", "display_value": "Alpha", "type": "enum"}
+    ]
   }
 ]
 ```
+
+`custom_fields` contains every custom field configured on your Asana project. Fields not set on a task will appear with `"display_value": null`. Tasks with no custom fields will return an empty array.
+
+### Get comments for a task
+
+```bash
+GET /projects/{project_id}/tasks/{task_id}/comments
+```
+
+Returns all user comments on the task (system events such as assignment changes are excluded).
+
+Example:
+
+```bash
+curl http://localhost:8000/projects/1215861189381337/tasks/1216147669244223/comments
+```
+
+Response:
+
+```json
+[
+  {
+    "gid": "1234567890",
+    "text": "This is a comment",
+    "created_at": "2026-07-03T08:22:00.000Z",
+    "created_by": {"gid": "987654321", "name": "Alice"}
+  }
+]
+```
+
+An empty array `[]` is returned if the task has no comments.
 
 ### Add a comment to a task
 
@@ -172,6 +239,44 @@ Response:
   "created_at": "2026-07-02T..."
 }
 ```
+
+### Attach a file to a task
+
+```bash
+POST /projects/{project_id}/tasks/{task_id}/attach
+```
+
+Attaches a file to a task in Asana. The file is referenced by its path on the server's filesystem.
+
+Request body:
+
+```json
+{"filename": "report.pdf"}
+```
+
+You only provide the **filename** — the API automatically looks for it inside the `uploads/` folder.
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/projects/1215861189381337/tasks/1216147669244223/attach \
+  -H "Content-Type: application/json" \
+  -d '{"filename": "report.pdf"}'
+```
+
+Response:
+
+```json
+{
+  "gid": "...",
+  "name": "report.pdf",
+  "download_url": "https://..."
+}
+```
+
+> **Running with Docker:** Place the file in the `uploads/` folder at the project root on your host machine. Docker mounts that folder into the container automatically. See the [File attachments with Docker](#file-attachments-with-docker) section below.
+
+> **Running locally (no Docker):** Place the file in the `uploads/` folder next to `main.py` and provide just the filename.
 
 ### Mark a task as complete
 
