@@ -19,6 +19,44 @@ class TaskService:
         """
         self.asana_client = asana_client
 
+    def create_task(self, project_id: str, name: str, notes: str = None, assignee: str = None, due_on: str = None) -> TaskResponse:
+        """
+        Create a new task in the project.
+
+        Args:
+            project_id: ID of the Asana project to create the task in
+            name: Name of the task
+            notes: Task description/notes
+            assignee: Assignee ID or email
+            due_on: Due date in YYYY-MM-DD format
+
+        Returns:
+            TaskResponse: Created task details
+
+        Raises:
+            HTTPException: 500 on Asana API error
+        """
+        tasks_api = self.asana_client.get_tasks_api()
+        body = {
+            "data": {
+                "name": name,
+                "projects": [project_id]
+            }
+        }
+        
+        if notes:
+            body["data"]["notes"] = notes
+        if assignee:
+            body["data"]["assignee"] = assignee
+        if due_on:
+            body["data"]["due_on"] = due_on
+
+        try:
+            result = tasks_api.create_task(body=body, opts={})
+            return TaskResponse(**result)
+        except ApiException as e:
+            raise HTTPException(status_code=500, detail=f"Asana API error: {e.reason}")
+
     def list_tasks(self, project_id: str) -> List[TaskResponse]:
         """
         Get all tasks in the project.

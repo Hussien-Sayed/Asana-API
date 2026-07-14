@@ -2,7 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from models import TaskResponse, CommentRequest, CommentResponse, TaskUpdateResponse, TaskCommentResponse, AttachFileRequest, AttachFileResponse
+from models import TaskResponse, TaskCreateRequest, CommentRequest, CommentResponse, TaskUpdateResponse, TaskCommentResponse, AttachFileRequest, AttachFileResponse
 from services.task_service import TaskService
 from config import get_settings
 from asana_client import AsanaClient
@@ -14,6 +14,21 @@ def get_task_service() -> TaskService:
     settings = get_settings()
     client = AsanaClient(settings.asana_access_token)
     return TaskService(client)
+
+
+@router.post("/{project_id}/tasks", response_model=TaskResponse)
+async def create_task(
+    project_id: str,
+    task: TaskCreateRequest,
+    task_service: TaskService = Depends(get_task_service)
+) -> TaskResponse:
+    """Create a new task in the project."""
+    try:
+        return task_service.create_task(project_id, task.name, task.notes, task.assignee, task.due_on)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
 
 
 @router.get("/{project_id}/tasks", response_model=List[TaskResponse])

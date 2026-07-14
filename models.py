@@ -25,6 +25,15 @@ class TaskResponse(BaseModel):
     custom_fields: List[CustomField] = []
 
 
+class TaskCreateRequest(BaseModel):
+    """Pydantic model for task creation request."""
+
+    name: str
+    notes: Optional[str] = None
+    assignee: Optional[str] = None
+    due_on: Optional[str] = None
+
+
 class CommentRequest(BaseModel):
     """Pydantic model for comment creation request."""
 
